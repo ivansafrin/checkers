@@ -139,16 +139,14 @@ int str_to_board(const std::string &move) {
 int calc_score(char *board) {
 	static std::unordered_map<char, int> score_map ({{'x', 1}, {'X', 10}, {'o', -1}, {'O', -10}});
 	int score = 0;
-	for(int i=0; i < 64; i++) {
+	for(int i=0; i < 64; i++)
 		score += score_map[board[i]];
-	}
 	return score;
 }
 
-int minimax(node_ref node, int depth, bool maximizingPlayer) {
-	if(depth == 0) {
+int minimax(node_ref node, int depth, int alpha, int beta, bool maximizingPlayer) {
+	if(depth == 0)
 		return calc_score(node->board);
-	}
 	if(maximizingPlayer) {
 		std::vector<std::pair<int, int>> moves = get_possible_moves_for_side(node->board, 'x');
 		int maxEval = std::numeric_limits<int>::min();
@@ -156,8 +154,11 @@ int minimax(node_ref node, int depth, bool maximizingPlayer) {
 			node_ref child_node = std::make_shared<checkers_tree_node>(node->board, m.first, m.second);
 			node->children.push_back(child_node);
 			move_piece(child_node->board, m.first, m.second, 'x');
-			child_node->score = minimax(child_node, depth-1, false);
+			child_node->score = minimax(child_node, depth-1, alpha, beta, false);
 			maxEval = std::max(maxEval, child_node->score);
+			alpha = std::max(alpha, child_node->score);
+			if(beta <= alpha)
+				break;
 		}		
 		return maxEval;
 	} else {
@@ -167,8 +168,11 @@ int minimax(node_ref node, int depth, bool maximizingPlayer) {
 			node_ref child_node = std::make_shared<checkers_tree_node>(node->board, m.first, m.second);
 			node->children.push_back(child_node);
 			move_piece(child_node->board, m.first, m.second, 'o');
-			child_node->score = minimax(child_node, depth-1, true);
+			child_node->score = minimax(child_node, depth-1, alpha, beta, true);
 			minEval = std::min(minEval, child_node->score);
+			beta = std::min(beta, child_node->score);
+			if(beta <= alpha)
+				break;
 		}
 		return minEval;	
 	}
@@ -176,7 +180,7 @@ int minimax(node_ref node, int depth, bool maximizingPlayer) {
 
 void run_ai(char *board, char side) {
 	node_ref root = std::make_shared<checkers_tree_node>(board, side);
-	minimax(root, 6, side == 'x');	
+	minimax(root, 6, std::numeric_limits<int>::min(), std::numeric_limits<int>::max(), side == 'x');	
 	std::sort(root->children.begin(), root->children.end(), [] (node_ref const& a, node_ref const& b) { return a->score > b->score; });
 	int move_from, move_to;
 	if(side == 'x') {
@@ -194,20 +198,21 @@ bool check_game_over(char *board) {
 	std::vector<std::pair<int, int>> x_moves = get_possible_moves_for_side(board, 'x');
 	std::vector<std::pair<int, int>> o_moves = get_possible_moves_for_side(board, 'o');
 	if(x_moves.size() == 0 && o_moves.size() > 0) {
-		std::cout << "\nGAME OVER: BLUE WINS!\n\n";
-		return true;
+		std::cout << "\nGAME OVER: BLUE WINS!\n\n"; return true;		
 	} else if(o_moves.size() == 0 && x_moves.size() > 0) {
-		std::cout << "\nGAME OVER: RED WINS!\n\n";
-		return true;
+		std::cout << "\nGAME OVER: RED WINS!\n\n"; return true;		
 	} else if(o_moves.size() == 0 && x_moves.size() == 0) {
-		std::cout << "\nGAME OVER: DRAW!\n\n";
-		return true;
+		std::cout << "\nGAME OVER: DRAW!\n\n"; return true;		
 	}
 	return false;
 }
 
 int main(int argc, char **argv) {
 	std::cout << "\n\n CHECKERS \n\n";
+	bool ai_only = false;
+	if(argc > 1) {
+		ai_only = std::string(argv[1]) == "--ai-only";
+	}
 	char board[64];
 	int cnt=0;
 	for(int i=0; i < 64; i++) {
@@ -229,24 +234,25 @@ int main(int argc, char **argv) {
 			run_ai(board, 'x');
 			ai_turn = false;
 		} else {
-			run_ai(board, 'o');
-			ai_turn = true;
-			/*
-			std::string move;
-			std::cout << "\nBlue: Enter move (ex. a5b4) or 'exit'.\n>";
-			std::getline(std::cin, move);
-			if(move == "exit")
-				return 0;
-			int from = str_to_board(move.substr(0,2));
-			int to = str_to_board(move.substr(2,2));
-			if(!check_valid_move(board, from, to, 'o')) {
-				std::cout << "Invalid move!\n\n";
-			} else {
-				move_piece(board, from, to ,'o');
-				std::cout << "Player move: " << move << std::endl;
+			if(ai_only) {
+				run_ai(board, 'o');
 				ai_turn = true;
+			} else {
+				std::string move;
+				std::cout << "\nBlue: Enter move (ex. a5b4) or 'exit'.\n>";
+				std::getline(std::cin, move);
+				if(move == "exit")
+					return 0;
+				int from = str_to_board(move.substr(0,2));
+				int to = str_to_board(move.substr(2,2));
+				if(!check_valid_move(board, from, to, 'o')) {
+					std::cout << "Invalid move!\n\n";
+				} else {
+					move_piece(board, from, to ,'o');
+					std::cout << "Player move: " << move << std::endl;
+					ai_turn = true;
+				}
 			}
-			*/
 		}
 		draw_board(board);
 	}
