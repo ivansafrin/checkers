@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <random>
 
+bool game_over = false;
 struct checkers_tree_node;
 typedef std::shared_ptr<checkers_tree_node> node_ref;
 struct checkers_tree_node {	
@@ -24,7 +25,7 @@ struct checkers_tree_node {
 
 void draw_board(char *board) {
 	static std::unordered_map<char, std::string> emoji_map (
-    { {'!', "⬜️"}, {' ', "⬛️"}, {'x', "🔴"}, {'o', "🔵"}, {'X', "🍎"}, {'O', "🦋"}});
+    { {'!', "\033[0;43m  \033[0m"}, {' ', "  "}, {'x', "\033[0;31m\033[1;31mⓄ \033[0m"}, {'o', "\033[1;34mⓄ \033[0m"}, {'X', "\033[0;31m\033[1;31mⓍ \033[0m"}, {'O', "\033[1;34mⓍ \033[0m"}});
 	std::cout << "0 ";
 	for(int i=0; i < 64; i++) {
 		if(i % 8 ==0 && i > 0) 
@@ -201,7 +202,7 @@ void run_ai(char *board, char side) {
 		move_to = lowest_node->to;
 		lowest_node = lowest_node->parent;
 	}
-	std::cout << "AI move:" << board_to_str(move_from, move_to) << std::endl;
+	std::cout << "\nAI move:" << board_to_str(move_from, move_to) << std::endl;
 	move_piece(board, move_from, move_to ,side);
 }
 
@@ -222,15 +223,14 @@ int main(int argc, char **argv) {
 		}
 	}
 	draw_board(board);
-	bool done = false;
 	bool ai_turn = false;
-	while(!done) {		
+	while(!game_over) {		
 		if(ai_turn) {
 			run_ai(board, 'x');
 			ai_turn = false;
 		} else {
 			std::string move;
-			std::cout << "\nEnter move (ex. a5b4) or 'exit'.\n>";
+			std::cout << "\nBlue: Enter move (ex. a5b4) or 'exit'.\n>";
 			std::getline(std::cin, move);
 			if(move == "exit")
 				return 0;
